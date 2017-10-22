@@ -4,6 +4,7 @@ import sys
 import vrep
 import time
 import datetime
+import numpy as np
 
 PROXIMITY_LIMIT = 0.3
 
@@ -40,10 +41,6 @@ vrep.simxFinish(-1) # just in case, close all opened connections
 port = int(sys.argv[1])
 lmh  = int(sys.argv[2])
 rmh  = int(sys.argv[3])
-#sonar2 = int(sys.argv[4])
-#sonar4 = int(sys.argv[5])
-#sonar5 = int(sys.argv[6])
-#sonar7 = int(sys.argv[7])
 
 # Connect to V-REP
 clientID = vrep.simxStart('127.0.0.1', port, True, True, 2000, 5)
@@ -56,51 +53,36 @@ if clientID == -1:
 else:
     print ('Connected to remote API server')
     oldMsg = msg = ''
+    inRotation = False
+    lspeed = +1.0
+    rspeed = +1.0
+
     while (vrep.simxGetConnectionId(clientID) != -1):
-        dataSonars = read_all_sonar(clientID, 8)
+        dataSonars = np.array(read_all_sonar(clientID, 8))
+        minProximity = dataSonars.min()
 
-        lspeed = 1.0
-        rspeed = 1.0
-
-        for i in range(len(dataSonars)):
-            if (dataSonars[i] <= PROXIMITY_LIMIT):
-                if (i <= 4):
-                    rspeed = -1.0
-                    lspeed = +2.0
-                else:
-                    lspeed = -1.0
-                    rspeed = +2.0
-                break
-
-        msg = 'left: ' + str(lspeed) + '| right: ' + str(rspeed)
-
-        '''
-        if dataSonars[3] < 0.8 or dataSonars[4] < 0.3:
-            lspeed = -1.0
-            rspeed = +1.7
-            msg = 'turn left'
-        elif dataSonars[1] < 0.7:
-            lspeed = +1.2
-            rspeed = +1.5
-            msg = 'recto left'
-        elif dataSonars[6] < 0.3:
-            lspeed = +0.1
-            rspeed = +1.4
-            msg = 'turn left'
-        else:
+        if (minProximity <= 0.3 and inRotation == False):
+            inRotation = True
+            i = dataSonars.argmax()
+            if (i <= 4):
+                lspeed = +2.0
+                rspeed = -2.0
+            else:
+                lspeed = -2.0
+                rspeed = +2.0
+        elif inRotation == False or minProximity > 0.3:
             lspeed = +1.0
             rspeed = +1.0
-            msg = 'recto'
-        '''
+            inRotation = False
+
+        #msg = 'left: ' + str(lspeed) + '|x right: ' + str(rspeed)
 
         vrep.simxSetJointTargetVelocity(clientID, lmh, lspeed, vrep.simx_opmode_oneshot)
         vrep.simxSetJointTargetVelocity(clientID, rmh, rspeed, vrep.simx_opmode_oneshot)
 
-
         '''if oldMsg != msg:
             printMessage(clientID, msg)
             oldMsg = msg'''
-
 
         time.sleep(0.005)
 
