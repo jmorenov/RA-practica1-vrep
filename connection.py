@@ -76,5 +76,7 @@ class RemoteConnection:
 
         if (angle > 0):
             self.setLeftMotorVelocity(angularVelocity)
+            self.setRightMotorVelocity(-angularVelocity)
         else:
             self.setRightMotorVelocity(angularVelocity)
+            self.setLeftMotorVelocity(-angularVelocity)
