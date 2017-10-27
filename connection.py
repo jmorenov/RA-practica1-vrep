@@ -2,6 +2,7 @@ import sys
 import vrep
 import datetime
 import math
+import time
 
 class RemoteConnection:
 
@@ -23,19 +24,20 @@ class RemoteConnection:
             self.printMessage('Failed connecting to remote API server')
         else:
             self.printMessage('Connected to remote API server')
-            self.setLeftMotorVelocity(0)
-            self.setRightMotorVelocity(0)
 
-            controller(self)
+            try:
+                controller(self)
+            except AttributeError as error:
+                self.printMessage(str(error.message))
+            except:
+                self.printMessage(str(sys.exc_info()[0]))
 
             # Close the connection to V-REP
             vrep.simxFinish(self.clientID)
 
-        self.printMessage('Program ended')
-
     def printMessage(self, message):
         message = '### ' + str(datetime.datetime.now().time()) + ' | ' + message
-        returnCode = vrep.simxAddStatusbarMessage(self.clientID, message, vrep.simx_opmode_oneshot)
+        returnCode = vrep.simxAddStatusbarMessage(self.clientID, message, vrep.simx_opmode_oneshot_wait)
 
         return returnCode
 
@@ -68,15 +70,14 @@ class RemoteConnection:
     def setRightMotorVelocity(self, velocity):
         vrep.simxSetJointTargetVelocity(self.clientID, self.rightMotorHandle, velocity, vrep.simx_opmode_oneshot)
 
-    def setAngle(self, angle, time):
+    def setAngle(self, angle, timeValue):
         angle = math.radians(angle)
-        angularVelocity = angle/time
-
-        self.printMessage(str(angularVelocity))
+        angularVelocity = angle/(timeValue)
 
         if (angle > 0):
-            self.setLeftMotorVelocity(angularVelocity)
-            self.setRightMotorVelocity(-angularVelocity)
+            self.setLeftMotorVelocity(angularVelocity/2)
+            self.setRightMotorVelocity(-angularVelocity/2)
         else:
             self.setRightMotorVelocity(angularVelocity)
-            self.setLeftMotorVelocity(-angularVelocity)
+
+        #time.sleep(1.0)
