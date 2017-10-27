@@ -10,8 +10,10 @@ class RemoteConnection:
         self.numberOfArguments = str(len(sys.argv))
         self.argumentList = str(len(sys.argv))
         self.port = int(sys.argv[1])
-        self.leftMotorHandle = int(sys.argv[2])
-        self.rightMotorHandle = int(sys.argv[3])
+        self.robotHandle = int(sys.argv[2])
+        self.leftMotorHandle = int(sys.argv[3])
+        self.rightMotorHandle = int(sys.argv[4])
+        self.sensorName = str(sys.argv[5])
 
     def run(self, controller):
         vrep.simxFinish(-1)  # just in case, close all opened connections
@@ -27,6 +29,14 @@ class RemoteConnection:
 
             try:
                 controller(self)
+            except ValueError as error:
+                self.printMessage(str(error.message))
+            except ZeroDivisionError as error:
+                self.printMessage(str(error.message))
+            except IndexError as error:
+                self.printMessage(str(error.message))
+            except TypeError as error:
+                self.printMessage(str(error.message))
             except AttributeError as error:
                 self.printMessage(str(error.message))
             except:
@@ -51,33 +61,79 @@ class RemoteConnection:
             else:
                 return 1.0
 
-    def readAllSensors(self, numberOfSensorsToRead = 16):
+    def readAllSensors(self, numberOfSensorsToRead = 16, proximityValueForUnactivatedSensors = 1.0):
         s = vrep.simxGetObjectGroupData(self.clientID, vrep.sim_object_proximitysensor_type, 13, vrep.simx_opmode_blocking)
-        r = []
+        proximity = []
+
         for i in range(numberOfSensorsToRead):
             if s[2][2 * i] == 1:
-                r.append(s[3][6 * i + 2])
+                proximity.append(s[3][6 * i + 2])
             else:
-                r.append(1.0)
-        return r
+                proximity.append(proximityValueForUnactivatedSensors)
+
+        return proximity
 
     def getConnectionId(self):
         return vrep.simxGetConnectionId(self.clientID)
 
     def setLeftMotorVelocity(self, velocity):
         vrep.simxSetJointTargetVelocity(self.clientID, self.leftMotorHandle, velocity, vrep.simx_opmode_oneshot)
+        vrep.simxSynchronousTrigger(self.clientID)
 
     def setRightMotorVelocity(self, velocity):
         vrep.simxSetJointTargetVelocity(self.clientID, self.rightMotorHandle, velocity, vrep.simx_opmode_oneshot)
+        vrep.simxSynchronousTrigger(self.clientID)
 
-    def setAngle(self, angle, timeValue):
-        angle = math.radians(angle)
-        angularVelocity = angle/(timeValue)
+    def getAngle(self):
+        ret, eulerAngles = vrep.simxGetObjectOrientation(self.clientID, self.robotHandle, -1, vrep.simx_opmode_oneshot)
 
-        if (angle > 0):
-            self.setLeftMotorVelocity(angularVelocity/2)
-            self.setRightMotorVelocity(-angularVelocity/2)
+        return math.degrees(eulerAngles[2])
+
+    def getPosition(self):
+        ret, position = vrep.simxGetObjectPosition(self.clientID, self.robotHandle, -1, vrep.simx_opmode_oneshot)
+
+        return position
+
+    def getSensorAngle(self, sensorNumber):
+        err, sensorHandle = vrep.simxGetObjectHandle(self.clientID, self.sensorName + str(sensorNumber),
+                                                vrep.simx_opmode_blocking)
+        ret, eulerAngles = vrep.simxGetObjectOrientation(self.clientID, sensorHandle, -1,
+                                                         vrep.simx_opmode_oneshot)
+
+        angle = math.fabs(math.degrees(eulerAngles[1]))
+
+        if (sensorNumber >= 5 or sensorNumber <= 12):
+            return angle
         else:
-            self.setRightMotorVelocity(angularVelocity)
+            return -angle
 
-        #time.sleep(1.0)
+    def setAngle(self, angleToRotate):
+        if angleToRotate == 0.0:
+            return
+
+        speedRotation = 0.5
+        sign = angleToRotate / math.fabs(angleToRotate)
+
+        self.setLeftMotorVelocity(speedRotation * sign)
+        self.setRightMotorVelocity(-speedRotation * sign)
+        vrep.simxSynchronousTrigger(self.clientID)
+
+        previousAngle = self.getAngle()
+        rotation = 0
+
+        while math.fabs(rotation) <= math.fabs(angleToRotate):
+            angle = self.getAngle()
+            da = angle - previousAngle
+
+            if da > 0:
+                da = math.fmod(da + math.pi, 2 * math.pi) - math.pi
+            else:
+                da = math.fmod(da - math.pi, 2 * math.pi) + math.pi
+
+            rotation += da
+            previousAngle = angle
+            #self.printMessage(str(rotation) + ' ' + str(angleToRotate))
+
+        self.setLeftMotorVelocity(0)
+        self.setRightMotorVelocity(0)
+        vrep.simxSynchronousTrigger(self.clientID)

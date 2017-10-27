@@ -1,22 +1,31 @@
 import time
 import numpy as np
+import vrep
 
 PROXIMITY_LIMIT = 0.3
 
 def controller(remoteConnection):
-    counter = 0
+    lspeed = +1.0
+    rspeed = +1.0
+    endSimulation = False
 
-    while (remoteConnection.getConnectionId() != -1 and counter < 1):
+    while (remoteConnection.getConnectionId() != -1 and endSimulation == False):
+        proximitySonars = np.array(remoteConnection.readAllSensors(8))
 
-        #remoteConnection.setLeftMotorVelocity(-50)
-        #remoteConnection.setRightMotorVelocity(50)
-        remoteConnection.setAngle(90, 0.2)
-        time.sleep(0.2)
+        if proximitySonars[3] <= 0.3 or proximitySonars[4] <= 0.3:
+            remoteConnection.printMessage('Collision detected! Simulation ended')
+            #remoteConnection.printMessage(str(orientationSonars))
+            #remoteConnection.setAngle(90)
+            lspeed = 0.0
+            rspeed = 0.0
+            endSimulation = True
+        '''else:
+            maxDistanceIndex = proximitySonars.argmax()
+            maxDistanceOrientation = orientationSonars[maxDistanceIndex]
+            remoteConnection.setAngle(maxDistanceOrientation)'''
 
-        remoteConnection.printMessage('2')
-        remoteConnection.setLeftMotorVelocity(0)
-        remoteConnection.setRightMotorVelocity(0)
-        time.sleep(0.005)
-        remoteConnection.printMessage('3')
+        remoteConnection.printMessage(str(remoteConnection.getSensorAngle(8)))
+        #remoteConnection.printMessage(str(remoteConnection.getSensorAngle(4)))
 
-        counter += 1
+        remoteConnection.setLeftMotorVelocity(lspeed)
+        remoteConnection.setRightMotorVelocity(rspeed)
