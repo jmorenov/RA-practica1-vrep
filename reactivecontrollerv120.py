@@ -12,27 +12,22 @@ def controller(remoteConnection):
     while (remoteConnection.getConnectionId() != -1 and endSimulation == False):
         proximitySonars = np.array(remoteConnection.readAllSensors(8))
 
-        if proximitySonars.min() <= 0.1:
+        if proximitySonars.min() <= 0.2:
             minProximityIndex = proximitySonars.argmin()
 
             if minProximityIndex == 3 or minProximityIndex == 4:
                 remoteConnection.printMessage('Collision detected! Simulation ended')
                 lspeed = 0.0
                 rspeed = 0.0
+                endSimulation = True
             else:
-                minProximityOrientation = remoteConnection.getSensorAngle(minProximityIndex + 1)
-                randomOrientation = random.uniform(-10, +10)
-                remoteConnection.setAngle(minProximityOrientation + randomOrientation)
-        elif proximitySonars[3] <= 0.7 or proximitySonars[4] <= 0.7:
-            maxDistanceIndex = proximitySonars.argmax()
+                if minProximityIndex <= 3:
+                    interval = -5
+                else:
+                    interval = +5
 
-            if (proximitySonars[maxDistanceIndex] == 1):
-                maxDistanceIndexes = np.where(proximitySonars == 1)[0]
-                maxDistanceIndex = random.randint(0, len(maxDistanceIndexes) - 1)
-
-            maxDistanceOrientation = remoteConnection.getSensorAngle(maxDistanceIndex + 1)
-            randomOrientation = random.uniform(0, maxDistanceOrientation)
-            remoteConnection.setAngle(randomOrientation)
+                randomOrientation = random.uniform(0, interval)
+                remoteConnection.setAngle(randomOrientation)
         else:
             if lspeed < 2.0 and rspeed < 2.0 and proximitySonars.min() == 1:
                 lspeed += 0.1

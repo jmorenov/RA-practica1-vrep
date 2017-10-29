@@ -2,7 +2,6 @@ import sys
 import vrep
 import datetime
 import math
-import time
 
 class RemoteConnection:
 
@@ -102,10 +101,11 @@ class RemoteConnection:
 
         angle = math.fabs(math.degrees(eulerAngles[1]))
 
-        if (sensorNumber >= 5 or sensorNumber <= 12):
-            return angle
+        if (sensorNumber - 1 >= 5 and sensorNumber - 1 <= 12):
+            return angle + 90
         else:
-            return -angle
+            return angle - 90
+
 
     def setAngle(self, angleToRotate):
         if angleToRotate == 0.0:
