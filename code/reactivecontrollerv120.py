@@ -2,7 +2,7 @@ import time
 import numpy as np
 import random
 
-PROXIMITY_LIMIT = 0.3
+PROXIMITY_LIMIT = 0.2
 VELOCITY_BASE = 1.0
 VELOCITY_MAX = 2.0
 VELOCITY_MIN = 0.5

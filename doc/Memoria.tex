@@ -100,7 +100,7 @@ JAVIER MORENO VEGA\\
 	[Imagen 1: Robot Pioneer-3DX]
 \end{center}
 La práctica se empezó con un controlador muy sencillo que solo evitaba los obstáculos, y se fue iterando sobre él hasta conseguir uno "más avanzado" que seguía un corredor y terminaba al detectar el fina, tal y como pedía el enunciado de esta práctica. Se han creado varios mundos para experimentar con este controlador, como se enseñará en los experimentos.\\\\
-Para el final de la práctica se ha investigado sobre el aprendizaje por refuerzo con el fin de que fuera el propio agente el que creara su controlador al explorar el entorno. Se presenta una versión preliminar con una idea para trabajar en mundos continuos usando Q-learning y el Proceso de Decisión de Markov (MDP).
+Para el final de la práctica se ha investigado sobre el aprendizaje por refuerzo \cite{pdf:reinforcementlearning} con el fin de que fuera el propio agente el que creara su controlador al explorar el entorno. Se presenta una versión preliminar con una idea para trabajar en mundos continuos usando Q-learning \cite{pdf:qlearning1} \cite{pdf:qlearning2} y el Proceso de Decisión de Markov (MDP).
 \section{Instalación y arquitectura creada}\label{sec:instalacionyarquitecturacreada}
 La instalación del software no tuvo ningún problema complicado, lo único que costó mas detectar fue que había que darle permisos de ejecución al script Python client. Esta instalación se ha realizado sobre un sistema Xubuntu 16.0xx con kernel xxx, V-Rep xxx y python xxx. Además sobre un portatil Macbook Pro 2017 macOS High Sierra 10.13, V-Rep  Pro Edu 3.4.0 y python 2.7.10.\\\\
 Acerca de la arquitectura seguida, se ha intentado modularizar todo lo posible para evitar scripts demasiado largos y confusos. Se ha creado una clase llamada RemoteConnection que es la encargada de gestionar la conexión con V-Rep, recibe en el constructor los argumentos de llamada (puerto, los manejadores de los motores y el robot, etc) y crea una instancia RemoteConnection. Esta clase es la que iniciar el controlador, el cuál es pasado a través de otro script como argumento del método de RemoteConnection "run". Por lo tanto desde el controlador no es necesario llamar a ninguna función de V-Rep, sólo se llaman a métodos ya creados de RemoteConnection, y esta es la que llama a V-Rep. Además se encarga de la gestión de errores y de escribir mensajes de log en la consola de V-Rep.\\\\
@@ -182,11 +182,36 @@ Por último en el escenario tres se añadió un giro más pronunciado para ver e
 \end{center}
 \newpage
 \section{Aprendizaje por refuerzo}\label{sec:aprendizajeporrefuerzo}
+Finalizando la práctica se ha intentado un modelo de aprendizaje por refuerzo. A continuación explico los problemas que han surgido, las ideas iniciales de lo que se ha querido desarrollar y una primera versión implementada.
 \subsection{Ideas iniciales}\label{subsec:ideasiniciales}
+El aprendizaje por refuerzo consiste en que el agente aprenda a partir del entorno y genere un controlador para futuras acciones.\\\\
+Según el proceso de decisión de Markov (MDP) se tiene un conjunto finito de estados (S), un conjunto de acciones (A) y las interacciones entre ellos. Aquí surgió el primer problema ya que había que modelar este método en un espacio continuo, es decir, una forma de poder decidir que el robot está en un estado cuando este esté en determinado rango del espacio. \\\\
+La idea inicial para resolver este problema fue un modelo de estados por rango dirigido por los 16 sensores del robot, limitando el rango al sensor que detectara menor proximidad en cada lado del robot.\\\\
+Tendriamos definido el estado actual del robot el conjunto de acciones, y su probabilidad que dependerá de la distancia a un obstáculo, a las que se puede acceder desde el estado sería la dirección (el ángulo) de cada sensor. Por lo tanto el funcionamiento sería el siguiente: se define el estado actual, se elige una dirección y el robot empieza a andar hasta que sale del estado (rango de este); entonces vuelve a definir el nuevo estado y a repetir el proceso.\\\\
+La recompensa de un estado será la suma de las distancias a obstáculos de los sensores en ese estado.\\\\
+El siguiente problema que se encontró fua al intentar trabajar con Q-Learning ya que hay que inicializar el conjunto de estados, y en este caso los estados son desconocidos (así como su número), por lo tanto simplemente se elimino este paso del algoritmo y ahora cada vez que sale de un estado comprueba si el estado al que ha llegado ya existía o es nuevo.
 \subsection{Primera versión}\label{subsec:primeraversion}
+La estructura de esta versión para implementar Q-Learning es la siguiente:
+\begin{itemize}
+	\item S: Estados, array dinámico
+	\item A: Acciones, matriz |S| x 16
+	\item Q: Q(s, a) Función que devuelve la probabilidad de elegir a estando en el estado s.
+\end{itemize}
+
+Se han definido cuatro funciones para realizar el aprendizaje:
+\begin{itemize}
+	\item getState: devuelve el estado actual a partir de la posición
+	\item addNewState: añade un nuevo estado a S
+	\item addActionsToState: añade las acciones a un estado
+	\item addActionsToQ: añade las probabilidades de las acciones
+	\item getReward: obtiene la recompensa de un estado actual a partir de los sensores
+\end{itemize}
+
+A falta de terminar la implementación, la idea habría sido ir ejecutando el controlador hasta llegar al final del corredor. Se irían detectando los diferentes estados actuales e ir moviéndose entre estados, haciendo uso de las funciones explicadas arriba. Para añadir un nuevo estado se ha definido el número -1, cuando se detecta que estamos en un estado -1, es que es un nuevo estado.
 
 \newpage
 \section{Bibliografía}\label{sec:bibliografia}
 \bibliographystyle{plain}
 \bibliography{References}
 \end{document}
+\grid
