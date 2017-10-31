@@ -137,3 +137,6 @@ class RemoteConnection:
         self.setLeftMotorVelocity(0)
         self.setRightMotorVelocity(0)
         vrep.simxSynchronousTrigger(self.clientID)
+
+    def isConnectionEstablished(self):
+        return self.getConnectionId() != -1

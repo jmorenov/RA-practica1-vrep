@@ -12,4 +12,8 @@ def controller(remoteConnection):
         remoteConnection.setLeftMotorVelocity(lspeed)
         remoteConnection.setRightMotorVelocity(rspeed)
 
+        position = remoteConnection.getPosition()
+
+        remoteConnection.printMessage(str(position))
+
         time.sleep(0.010)

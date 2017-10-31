@@ -3,16 +3,20 @@ import numpy as np
 import random
 
 PROXIMITY_LIMIT = 0.3
+VELOCITY_BASE = 1.0
+VELOCITY_MAX = 2.0
+VELOCITY_MIN = 0.5
+TIME_STEP = 0.010
 
 def controller(remoteConnection):
-    lspeed = +1.0
-    rspeed = +1.0
+    lspeed = +VELOCITY_BASE
+    rspeed = +VELOCITY_BASE
     endSimulation = False
 
-    while (remoteConnection.getConnectionId() != -1 and endSimulation == False):
+    while (remoteConnection.isConnectionEstablished() and endSimulation == False):
         proximitySonars = np.array(remoteConnection.readAllSensors(8))
 
-        if proximitySonars.min() <= 0.2:
+        if proximitySonars.min() <= PROXIMITY_LIMIT:
             minProximityIndex = proximitySonars.argmin()
 
             if minProximityIndex == 3 or minProximityIndex == 4:
@@ -29,14 +33,14 @@ def controller(remoteConnection):
                 randomOrientation = random.uniform(0, interval)
                 remoteConnection.setAngle(randomOrientation)
         else:
-            if lspeed < 2.0 and rspeed < 2.0 and proximitySonars.min() == 1:
+            if lspeed < VELOCITY_MAX and rspeed < VELOCITY_MAX and proximitySonars.min() == 1:
                 lspeed += 0.1
                 rspeed += 0.1
-            elif lspeed > 0.5 and rspeed > 0.5 and proximitySonars.min() != 1:
+            elif lspeed > VELOCITY_MIN and rspeed > VELOCITY_MIN and proximitySonars.min() != 1:
                 lspeed -= 0.1
                 rspeed -= 0.1
 
         remoteConnection.setLeftMotorVelocity(lspeed)
         remoteConnection.setRightMotorVelocity(rspeed)
 
-        time.sleep(0.010)
+        time.sleep(TIME_STEP)
