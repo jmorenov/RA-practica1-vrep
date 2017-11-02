@@ -28,6 +28,8 @@ class RemoteConnection:
 
             try:
                 controller(self)
+            except NameError as error:
+                self.printMessage(str(error.message))
             except ValueError as error:
                 self.printMessage(str(error.message))
             except ZeroDivisionError as error:
