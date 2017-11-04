@@ -2,6 +2,7 @@ import sys
 import vrep
 import datetime
 import math
+import traceback
 
 class RemoteConnection:
 
@@ -36,6 +37,7 @@ class RemoteConnection:
                 self.printMessage(str(error.message))
             except IndexError as error:
                 self.printMessage(str(error.message))
+                self.printMessage(traceback.format_exc())
             except TypeError as error:
                 self.printMessage(str(error.message))
             except AttributeError as error:

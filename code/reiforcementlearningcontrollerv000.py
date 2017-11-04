@@ -1,18 +1,18 @@
 import time
 import numpy as np
 import random
+import math
 
 def controller(remoteConnection):
-    PROXIMITY_LIMIT = 0.1
-    TIME_STEP = 0.010
-    VELOCITY_BASE = 1.0
+    PROXIMITY_LIMIT = 0.4
+    TIME_STEP = 0.005
+    VELOCITY_BASE = 0.5
     EPSILON = 0.3
     S = list() # [x, y, range]
     A = list()
     Q = list()
     lspeed = +VELOCITY_BASE
     rspeed = +VELOCITY_BASE
-    state = -1
     actionIndex = 0
 
     def getState(position):
@@ -30,10 +30,20 @@ def controller(remoteConnection):
     def addActionsToQ(proximitySensors):
         Q.append(proximitySensors)
 
-    def getReward(proximitySensors):
-        proximitySensors = np.array(proximitySensors)
+    def calculateDistance(position1, position2):
+        return math.sqrt((position2[0] - position1[0]) ** 2 + (position2[1] - position1[1]) ** 2)
 
-        return proximitySensors.sum()
+    def getReward(oldPosition, proximitySensors):
+        if proximitySensors.min() <= PROXIMITY_LIMIT:
+            reward = -1
+        else:
+            actualPosition = remoteConnection.getPosition()
+            distance = calculateDistance(oldPosition, actualPosition)
+            distanceReward =  distance * 0.4
+            proximityReward = proximitySensors.sum() * 0.6
+            reward = distanceReward + proximityReward
+
+        return reward
 
     def getAnglesOfSensors():
         angles = []
@@ -46,8 +56,7 @@ def controller(remoteConnection):
     def addActionsToState(angles):
         A.append(angles)
 
-    def createNewState():
-        sensors = np.array(remoteConnection.readAllSensors())
+    def createNewState(sensors, position):
         range = sensors.min()
         newState = addNewState(position, range)
         addActionsToQ(sensors)
@@ -56,44 +65,58 @@ def controller(remoteConnection):
 
         return newState
 
+    def normalizeValue(value):
+        if value > 1:
+            return 1
+        elif value < 0:
+            return 0
+        else:
+            return value
+
+    lastPosition = remoteConnection.getPosition()
+    state = getState(lastPosition)
+    action = None
+
     while remoteConnection.isConnectionEstablished():
         position = remoteConnection.getPosition()
         actualState = getState(position)
-        sensors = np.array(remoteConnection.readAllSensors())
+        proximitySensors = np.array(remoteConnection.readAllSensors())
+        proximityFrontalSensors = np.array(proximitySensors[2:5])
 
-        if state != actualState or state == -1:
+        possibleCollision = proximityFrontalSensors.min() <= PROXIMITY_LIMIT
+        #remoteConnection.printMessage(str(proximityFrontalSensors.min()))
+
+        if state != actualState or possibleCollision == True:
+
             if actualState == -1: # New state
-                newState = createNewState()
+                newState = createNewState(proximitySensors, position)
                 actualState = newState
-
-            if state == -1:
-                state = actualState
-
-            reward = getReward(sensors)
 
             # r' = reward y s' = actualState
             # Actualizar el valor de Q(s, a)
-            Q[state][actionIndex] += reward + np.max(Q[actualState])
-            Q[state][actionIndex] = max(Q[state][actionIndex], 1)
+            Q[state][actionIndex] += getReward(lastPosition, proximityFrontalSensors)
+            Q[state][actionIndex] = normalizeValue(Q[state][actionIndex])
 
-            if random.uniform(0, 1) <= EPSILON: # Elegir aleatoriamente a
-                EPSILON -= 0.005
+            if possibleCollision == True or action != None: # Mayor probabilidad de mantener la misma direccion
+                if random.uniform(0, 1) <= EPSILON: # Elegir aleatoriamente a
+                    EPSILON -= 0.002
 
-                while True:
-                    actionIndex = random.randint(0, 16)
+                    while True:
+                        actionIndex = random.randint(0, 15)
+                        action = A[actualState][actionIndex]
+                        proximity = Q[actualState][actionIndex]
+
+                        if proximity > PROXIMITY_LIMIT:
+                            break
+                else: # Elegir a con mayor probabilidad
+                    actionIndex = np.argmax(Q[actualState])
                     action = A[actualState][actionIndex]
-                    proximity = Q[actualState][actionIndex]
 
-                    if proximity > PROXIMITY_LIMIT:
-                        break
-            else: # Elegir a con mayor probabilidad
-                actionIndex = np.argmax(Q[actualState])
-                action = A[actualState][actionIndex]
+            lastPosition = remoteConnection.getPosition()
+            state = actualState
 
             remoteConnection.setAngle(action)
             remoteConnection.setLeftMotorVelocity(lspeed)
             remoteConnection.setRightMotorVelocity(rspeed)
-            state = actualState
-
 
         time.sleep(TIME_STEP)
