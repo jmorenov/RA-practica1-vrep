@@ -194,7 +194,7 @@ El siguiente problema que se encontró fua al intentar trabajar con Q-Learning y
 La estructura de esta versión para implementar Q-Learning es la siguiente:
 \begin{itemize}
 	\item S: Estados, array dinámico
-	\item A: Acciones, matriz |S| x 16
+	\item A: Acciones, matriz $|S|$ x 16
 	\item Q: Q(s, a) Función que devuelve la probabilidad de elegir a estando en el estado s.
 \end{itemize}
 
@@ -202,12 +202,21 @@ Se han definido cuatro funciones para realizar el aprendizaje:
 \begin{itemize}
 	\item getState: devuelve el estado actual a partir de la posición
 	\item addNewState: añade un nuevo estado a S
-	\item addActionsToState: añade las acciones a un estado
 	\item addActionsToQ: añade las probabilidades de las acciones
-	\item getReward: obtiene la recompensa de un estado actual a partir de los sensores
+	\item calculateDistance: calcula la distancia entre dos puntos del mapa
+	\item setReward: obtiene la recompensa de un estado actual a partir de los sensores
+	\item getAnglesOfSensors: devuelve los ángulos de las direcciones de los sensores	
+	\item addActionsToState: añade las acciones a un estado
+	\item createNewState: Crea un nuevo estado y añade todas las posibles acciones con sus probabilidades
+	\item normalizeValue: Normaliza un valor entre 0 y 1
 \end{itemize}
 
-A falta de terminar la implementación, la idea habría sido ir ejecutando el controlador hasta llegar al final del corredor. Se irían detectando los diferentes estados actuales e ir moviéndose entre estados, haciendo uso de las funciones explicadas arriba. Para añadir un nuevo estado se ha definido el número -1, cuando se detecta que estamos en un estado -1, es que es un nuevo estado.
+La idea para esta primera implementación ha sido ir ejecutando el controlador sin determinar un estado terminal, se irían detectando los diferentes estados actuales e ir moviéndose entre estados, haciendo uso de las funciones explicadas arriba. Para añadir un nuevo estado se ha definido el número -1, cuando se detecta que estamos en un estado -1, es que es un nuevo estado.\\\\
+He basado la implementación en Q-Learning, y una visión general del algoritmo sería algo así: Iniciariamos en un estado sin definir, obtendríamos la posición actual y los sensores de proximidad, y si estamos en un estado diferente al anterior (el estado inicial sería una excepción) se procedería a cambiar de estado y definir las recompensas.\\\\
+Además se ha añadido una probabilidad para que sea más probable mantener la misma dirección que una nueva, e intentar así que el robot siga una dirección más estable.
+\subsection{Experimentos: Primera versión}\label{subsec:experimentosprimeraversion}
+La versión de aprendizaje por refuerzo se ha utilizado sobre los tres escenarios usados por la versión reactiva, pero no se ha conseguido un funcionamiento correcto. El robot terminaba por no elegir la mejor acción y acababa chocando o quedándose atrapado en un giro continuo.\\\\
+Habría que mejorar la función de recompensa y la probabilidad de dirección.
 
 \newpage
 \section{Bibliografía}\label{sec:bibliografia}

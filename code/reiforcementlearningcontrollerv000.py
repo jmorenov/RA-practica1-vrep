@@ -28,20 +28,23 @@ def controller(remoteConnection):
         return len(S) - 1
 
     def addActionsToQ(proximitySensors):
+        for i in range(8, 16):
+            proximitySensors[i] = normalizeValue(proximitySensors[i] - 0.5)
+
         Q.append(proximitySensors)
 
     def calculateDistance(position1, position2):
         return math.sqrt((position2[0] - position1[0]) ** 2 + (position2[1] - position1[1]) ** 2)
 
-    def getReward(oldPosition, proximitySensors):
+    def setReward(oldPosition, proximitySensors, oldReward):
         if proximitySensors.min() <= PROXIMITY_LIMIT:
-            reward = -1
+            reward = 0
         else:
             actualPosition = remoteConnection.getPosition()
             distance = calculateDistance(oldPosition, actualPosition)
             distanceReward =  distance * 0.4
             proximityReward = proximitySensors.sum() * 0.6
-            reward = distanceReward + proximityReward
+            reward = oldReward + distanceReward + proximityReward
 
         return reward
 
@@ -84,7 +87,6 @@ def controller(remoteConnection):
         proximityFrontalSensors = np.array(proximitySensors[2:5])
 
         possibleCollision = proximityFrontalSensors.min() <= PROXIMITY_LIMIT
-        #remoteConnection.printMessage(str(proximityFrontalSensors.min()))
 
         if state != actualState or possibleCollision == True:
 
@@ -94,8 +96,7 @@ def controller(remoteConnection):
 
             # r' = reward y s' = actualState
             # Actualizar el valor de Q(s, a)
-            Q[state][actionIndex] += getReward(lastPosition, proximityFrontalSensors)
-            Q[state][actionIndex] = normalizeValue(Q[state][actionIndex])
+            Q[state][actionIndex] = setReward(lastPosition, proximityFrontalSensors, Q[state][actionIndex])
 
             if possibleCollision == True or action != None: # Mayor probabilidad de mantener la misma direccion
                 if random.uniform(0, 1) <= EPSILON: # Elegir aleatoriamente a
